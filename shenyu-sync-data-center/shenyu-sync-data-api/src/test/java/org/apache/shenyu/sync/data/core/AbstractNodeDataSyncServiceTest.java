@@ -49,8 +49,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 @RunWith(MockitoJUnitRunner.class)
 public class AbstractNodeDataSyncServiceTest {
 
-    @Mock
-    private AbstractNodeDataSyncService.ChangeData changeData;
+    private final AbstractNodeDataSyncService.ChangeData changeData = new AbstractNodeDataSyncService.ChangeData(
+            "plugin", "selector", "rule", "auth", "meta", "proxy.selector", "discovery");
 
     @Mock
     private PluginDataSubscriber pluginDataSubscriber;
@@ -66,8 +66,7 @@ public class AbstractNodeDataSyncServiceTest {
     @Mock
     private DiscoveryUpstreamDataSubscriber discoveryUpstreamDataSubscriber;
 
-    @Mock
-    private ShenyuConfig shenyuConfig;
+    private final ShenyuConfig shenyuConfig = new ShenyuConfig();
 
     @Mock
     private AuthDataSubscriber authDataSubscriber;
@@ -84,6 +83,7 @@ public class AbstractNodeDataSyncServiceTest {
     public void setUp() {
 
         MockitoAnnotations.openMocks(this);
+        shenyuConfig.setNamespace("namespace");
 
         authDataSubscribers = new ArrayList<>();
         authDataSubscribers.add(authDataSubscriber);
@@ -145,6 +145,31 @@ public class AbstractNodeDataSyncServiceTest {
         ArgumentCaptor<AppAuthData> captor = ArgumentCaptor.forClass(AppAuthData.class);
         verify(authDataSubscriber).unSubscribe(captor.capture());
         assertEquals("testApp", captor.getValue().getAppKey());
+    }
+
+    @Test
+    public void testUnCacheAuthDataPreservesDotsInAppKey() {
+        String appKey = ".orders..service.";
+        nodeDataSyncService.unCacheAuthData("namespace.auth." + appKey);
+
+        ArgumentCaptor<AppAuthData> captor = ArgumentCaptor.forClass(AppAuthData.class);
+        verify(authDataSubscriber).unSubscribe(captor.capture());
+        assertEquals(appKey, captor.getValue().getAppKey());
+    }
+
+    @Test
+    public void testUnCacheAuthDataIgnoresAnotherNamespace() {
+        nodeDataSyncService.unCacheAuthData("another.auth.testApp");
+
+        verifyNoInteractions(authDataSubscriber);
+    }
+
+    @Test
+    public void testUnCacheAuthDataIgnoresInvalidPrefixOrEmptyAppKey() {
+        nodeDataSyncService.unCacheAuthData("namespace.meta.testApp");
+        nodeDataSyncService.unCacheAuthData("namespace.auth.");
+
+        verifyNoInteractions(authDataSubscriber);
     }
 
     @Test

@@ -266,13 +266,14 @@ public abstract class AbstractNodeDataSyncService {
     }
 
     protected void unCacheAuthData(final String removeKey) {
-        final String[] authKeys = StringUtils.split(removeKey, DefaultNodeConstants.JOIN_POINT);
-        if (Objects.isNull(authKeys) || authKeys.length < 3) {
+        final String keyPrefix = shenyuConfig.getNamespace() + DefaultNodeConstants.JOIN_POINT
+                + changeData.getAuthDataId() + DefaultNodeConstants.JOIN_POINT;
+        if (Objects.isNull(removeKey) || !removeKey.startsWith(keyPrefix) || removeKey.length() == keyPrefix.length()) {
             LOG.warn("AbstractNodeDataSyncService invalid auth data remove key: {}", removeKey);
             return;
         }
         final AppAuthData appAuthData = new AppAuthData();
-        appAuthData.setAppKey(authKeys[2]);
+        appAuthData.setAppKey(removeKey.substring(keyPrefix.length()));
         authDataSubscribers.forEach(e -> e.unSubscribe(appAuthData));
         removeListener(removeKey);
     }
