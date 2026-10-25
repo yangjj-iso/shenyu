@@ -241,6 +241,10 @@ public abstract class AbstractNodeDataSyncService {
         selectorData.setId(ruleKeys[3]);
         Optional.ofNullable(pluginDataSubscriber).ifPresent(e -> e.unSelectorSubscribe(selectorData));
         removeListener(removeKey);
+        // The child list watch belongs to this selector and must be recreated with it.
+        removeListener(ruleKeys[0] + DefaultNodeConstants.JOIN_POINT + changeData.getRuleDataId()
+                + DefaultNodeConstants.JOIN_POINT + selectorData.getPluginName()
+                + DefaultNodeConstants.JOIN_POINT + selectorData.getId() + DefaultNodeConstants.POINT_LIST);
     }
 
     protected void cacheRuleData(final String dataString) {
