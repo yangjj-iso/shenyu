@@ -84,11 +84,14 @@ public class AiProxyPluginConfiguration {
     /**
      * Ai proxy plugin handler.
      *
+     * @param providerFactory installed provider registry
+     * @param protocolFactory installed protocol registry
      * @return the shenyu plugin handler
      */
     @Bean
-    public AiProxyPluginHandler aiProxyPluginHandler() {
-        return new AiProxyPluginHandler();
+    public AiProxyPluginHandler aiProxyPluginHandler(final AiProxyProviderFactory providerFactory,
+                                                     final AiProxyProtocolFactory protocolFactory) {
+        return new AiProxyPluginHandler(providerFactory, protocolFactory);
     }
 
     @Bean

@@ -40,16 +40,22 @@ import org.apache.shenyu.plugin.ai.proxy.enhanced.service.AiProxyRetryProperties
 import org.apache.shenyu.plugin.ai.proxy.enhanced.transport.AiProxyTransport;
 import org.apache.shenyu.plugin.ai.proxy.enhanced.transport.AiProxyTransportProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Auto-configuration for the migrated execution path, provider profiles and transport properties.
@@ -87,6 +93,11 @@ class AiProxyPluginConfigurationTest {
                 .withBean("tenantProvider", AiProxyProvider.class, () -> provider).run(context -> {
                     org.assertj.core.api.Assertions.assertThat(context).hasNotFailed();
                     assertSame(provider, context.getBean(AiProxyProviderFactory.class).getProvider("TENANT_PROFILE"));
+                    PluginData plugin = new PluginData();
+                    plugin.setConfig("{\"provider\":\"TENANT_PROFILE\",\"model\":\"custom-model\"}");
+                    AiProxyPluginHandler handler = context.getBean(AiProxyPluginHandler.class);
+                    handler.handlerPlugin(plugin);
+                    assertEquals("custom-model", handler.getGlobalConfig().getModel());
                     AiCommonConfig config = new AiCommonConfig();
                     config.setProvider("tenant-profile");
                     config.setBaseUrl("https://example.org");
@@ -206,6 +217,32 @@ class AiProxyPluginConfigurationTest {
         contextRunner
                 .withPropertyValues("shenyu.plugins.ai.proxy.transport.max-response-bytes=-1")
                 .run(context -> org.assertj.core.api.Assertions.assertThat(context).hasFailed());
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void rejectsInvalidDefaultsWithoutReplacingOrLoggingCredentials(final CapturedOutput output) {
+        contextRunner.run(context -> {
+            AiProxyPluginHandler handler = context.getBean(AiProxyPluginHandler.class);
+            PluginData plugin = new PluginData();
+            plugin.setConfig("{\"provider\":\"OpenAI\",\"apiKey\":\"retained-secret-marker\",\"model\":\"active-model\"}");
+            handler.handlerPlugin(plugin);
+            for (String candidate : List.of("{\"provider\":\"unknown-secret-marker\"}",
+                    "{\"protocol\":\"unknown-secret-marker\"}", "{\"baseUrl\":\"https://url-secret-marker@example.com\"}",
+                    "{\"apiKey\":\"parse-secret-marker\"")) {
+                plugin.setConfig(candidate);
+                handler.handlerPlugin(plugin);
+                assertEquals("active-model", handler.getGlobalConfig().getModel());
+            }
+            plugin.setEnabled(false);
+            handler.handlerPlugin(plugin);
+            assertNull(handler.getGlobalConfig());
+            assertTrue(output.getAll().contains("Rejected invalid AI proxy defaults"));
+            assertFalse(output.getAll().contains("parse-secret-marker"));
+            assertFalse(output.getAll().contains("retained-secret-marker"));
+            assertFalse(output.getAll().contains("unknown-secret-marker"));
+            assertFalse(output.getAll().contains("url-secret-marker"));
+        });
     }
 
     @Test

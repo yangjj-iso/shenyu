@@ -244,6 +244,7 @@ public final class AiProxyEngine {
         }
         provider.capabilities().validate(providerRequest, stream);
         try {
+            AiProxyConfigValidator.validate(config);
             PreparedAiRequest preparedRequest = provider.prepareRequest(providerRequest, config);
             AiResponseAdapter responseAdapter = response -> protocol.encodeResponse(
                     route.conversion().responseAdapter().adapt(

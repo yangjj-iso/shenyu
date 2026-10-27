@@ -17,6 +17,7 @@
 
 package org.apache.shenyu.plugin.ai.proxy.enhanced.handler;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.common.constant.Constants;
@@ -24,9 +25,13 @@ import org.apache.shenyu.common.dto.PluginData;
 import org.apache.shenyu.common.dto.SelectorData;
 import org.apache.shenyu.common.dto.convert.rule.AiProxyHandle;
 import org.apache.shenyu.common.enums.PluginEnum;
+import org.apache.shenyu.common.exception.ShenyuException;
 import org.apache.shenyu.common.utils.GsonUtils;
 import org.apache.shenyu.plugin.ai.common.config.AiCommonConfig;
 import org.apache.shenyu.plugin.ai.proxy.enhanced.cache.AiProxyApiKeyCache;
+import org.apache.shenyu.plugin.ai.proxy.enhanced.protocol.AiProxyProtocolFactory;
+import org.apache.shenyu.plugin.ai.proxy.enhanced.provider.AiProxyProviderFactory;
+import org.apache.shenyu.plugin.ai.proxy.enhanced.service.AiProxyConfigValidator;
 import org.apache.shenyu.plugin.base.cache.CommonHandleCache;
 import org.apache.shenyu.plugin.base.handler.PluginDataHandler;
 import org.apache.shenyu.plugin.base.utils.CacheKeyUtils;
@@ -44,27 +49,73 @@ public class AiProxyPluginHandler implements PluginDataHandler {
 
     private final CommonHandleCache<String, AiProxyHandle> selectorCachedHandle = new CommonHandleCache<>();
 
+    private final AiProxyProviderFactory providerFactory;
+
+    private final AiProxyProtocolFactory protocolFactory;
+
     private volatile AiCommonConfig globalConfig;
 
+    /**
+     * Create a standalone handler with portable-field validation only.
+     * Use the factory-aware constructor to validate installed extension names before activation.
+     */
     public AiProxyPluginHandler() {
+        providerFactory = null;
+        protocolFactory = null;
+    }
+
+    /**
+     * Create a handler that also validates configured names against installed extensions.
+     *
+     * @param providerFactory installed provider registry
+     * @param protocolFactory installed protocol registry
+     */
+    public AiProxyPluginHandler(final AiProxyProviderFactory providerFactory, final AiProxyProtocolFactory protocolFactory) {
+        this.providerFactory = Objects.requireNonNull(providerFactory);
+        this.protocolFactory = Objects.requireNonNull(protocolFactory);
     }
 
     @Override
-    public void handlerPlugin(final PluginData pluginData) {
+    public synchronized void handlerPlugin(final PluginData pluginData) {
         if (Objects.isNull(pluginData)) {
             return;
         }
-        try {
-            globalConfig = Boolean.FALSE.equals(pluginData.getEnabled()) || StringUtils.isBlank(pluginData.getConfig())
-                    ? null : GsonUtils.getInstance().fromJson(pluginData.getConfig(), AiCommonConfig.class);
-        } catch (JsonParseException e) {
+        // Explicit disable/clear is authoritative, including credential revocation.
+        if (Boolean.FALSE.equals(pluginData.getEnabled()) || StringUtils.isBlank(pluginData.getConfig())) {
             globalConfig = null;
-            LOG.warn("Invalid configuration for plugin {}; cleared global defaults", pluginData.getName());
+            return;
+        }
+        try {
+            JsonElement json = GsonUtils.getInstance().fromJson(pluginData.getConfig(), JsonElement.class);
+            if (Objects.isNull(json) || json.isJsonNull() || json.isJsonObject() && json.getAsJsonObject().entrySet().isEmpty()) {
+                globalConfig = null;
+                return;
+            }
+            if (!json.isJsonObject()) {
+                throw new IllegalArgumentException("AI proxy defaults must be a JSON object");
+            }
+            JsonElement stream = json.getAsJsonObject().get("stream");
+            if (Objects.nonNull(stream) && !stream.isJsonNull()
+                    && (!stream.isJsonPrimitive() || !("true".equalsIgnoreCase(stream.getAsString()) || "false".equalsIgnoreCase(stream.getAsString())))) {
+                throw new IllegalArgumentException("AI stream must be boolean");
+            }
+            AiCommonConfig candidate = GsonUtils.getInstance().fromJson(json.toString(), AiCommonConfig.class);
+            AiProxyConfigValidator.validate(candidate);
+            if (Objects.nonNull(providerFactory) && StringUtils.isNotBlank(candidate.getProvider())) {
+                providerFactory.getProvider(candidate.getProvider());
+            }
+            if (Objects.nonNull(protocolFactory) && StringUtils.isNotBlank(candidate.getProtocol())) {
+                protocolFactory.getProtocol(candidate.getProtocol());
+            }
+            globalConfig = candidate;
+        } catch (JsonParseException | IllegalArgumentException | ShenyuException e) {
+            // Do not log the payload or exception: either may contain credentials.
+            LOG.warn("Rejected invalid AI proxy defaults; retaining the previous configuration");
         }
     }
 
     @Override
-    public void removePlugin(final PluginData pluginData) {
+    public synchronized void removePlugin(final PluginData pluginData) {
         globalConfig = null;
     }
 

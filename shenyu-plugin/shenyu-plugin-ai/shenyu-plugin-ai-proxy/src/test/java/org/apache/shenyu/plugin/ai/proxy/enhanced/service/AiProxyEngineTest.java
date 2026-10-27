@@ -134,6 +134,32 @@ class AiProxyEngineTest {
     }
 
     @Test
+    void testInvalidEffectiveConfigurationIsRejectedBeforeTransport() {
+        config.setTemperature(Double.NaN);
+        final String body = "{\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}";
+
+        StepVerifier.create(engine.execute(body, config, Optional.empty(), response -> response.getBody().then()))
+                .expectErrorSatisfies(error -> {
+                    assertTrue(error instanceof AiProxyException);
+                    assertEquals(AiProxyException.Kind.PROVIDER, ((AiProxyException) error).getKind());
+                }).verify();
+
+        assertNull(transportedRequest.get());
+    }
+
+    @Test
+    void testUnusedInvalidFallbackDoesNotRejectValidPrimary() {
+        AiCommonConfig fallback = new AiCommonConfig(config);
+        fallback.setTemperature(Double.NaN);
+        final String body = "{\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}";
+
+        StepVerifier.create(engine.execute(body, config, Optional.of(fallback), response -> response.getBody().then()))
+                .verifyComplete();
+
+        assertEquals("https://api.openai.com/v1/chat/completions", transportedRequest.get().getUri().toString());
+    }
+
+    @Test
     void testExecuteDelegatesBuiltRequestToTransport() throws Exception {
         final String body = "{\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}";
 
