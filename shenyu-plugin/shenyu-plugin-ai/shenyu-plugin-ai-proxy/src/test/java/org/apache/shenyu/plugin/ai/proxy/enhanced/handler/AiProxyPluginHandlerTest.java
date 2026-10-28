@@ -258,6 +258,7 @@ class AiProxyPluginHandlerTest {
         selector.setBaseUrl("https://example.com/v1");
         selector.setApiKey("selector-key");
         selector.setModel("selector-model");
+        selector.setTemperature(null);
 
         AiCommonConfig effective = new AiProxyConfigService(handler).resolvePrimaryConfig(selector);
 
@@ -265,6 +266,21 @@ class AiProxyPluginHandlerTest {
         assertEquals(0.5, effective.getTemperature());
         assertEquals("selector-model", effective.getModel());
         assertEquals("selector-key", effective.getApiKey());
+    }
+
+    @Test
+    void testExplicitSelectorSettingsOverridePartialDefaults() {
+        handler.handlerPlugin(plugin("{\"maxTokens\":10,\"temperature\":0.5}"));
+        AiProxyHandle selector = new AiProxyHandle();
+        selector.setMaxTokens(20);
+        selector.setTemperature(0.8);
+
+        AiCommonConfig effective = new AiProxyConfigService(handler).resolvePrimaryConfig(selector);
+
+        assertEquals(20, effective.getMaxTokens());
+        assertEquals(0.8, effective.getTemperature());
+        assertEquals(10, handler.getGlobalConfig().getMaxTokens());
+        assertEquals(0.5, handler.getGlobalConfig().getTemperature());
     }
 
     @Test
