@@ -33,7 +33,42 @@ local implementations, not a claim that upstream issues have been closed.
   `b46bf15c3a243e926994cb32c3f0a23eadc41adf` / 2.7.2-SNAPSHOT.
 - All work is in isolated checkouts. The original working directory's existing
   changes were not edited.
-- No push, PR creation, issue assignment/comment, or upstream closure was made.
+- Initial delivery was local. The ten implementations have now been pushed and
+  published as the PRs below. No upstream merge or issue closure was performed.
+
+## Published pull requests
+
+The core publication branches use updated upstream master `92d16c292`.
+All ten feature branches and the original aggregate branches were pushed to the
+yangjj-iso forks. Prerequisite-dependent PRs are drafts; their descriptions link
+the prerequisites and a comparison containing only the new feature.
+
+| Issue | Upstream PR | State / prerequisite |
+| --- | --- | --- |
+| #7454 | [plugin-store #33](https://github.com/apache/shenyu-plugin-store/pull/33) | Open |
+| #8202 | [plugin-store #34](https://github.com/apache/shenyu-plugin-store/pull/34) | Open |
+| #8200 | [ShenYu #8274](https://github.com/apache/shenyu/pull/8274) | Open |
+| #8201 | [ShenYu #8272](https://github.com/apache/shenyu/pull/8272) | Open |
+| #8210 | [ShenYu #8273](https://github.com/apache/shenyu/pull/8273) | Open |
+| #8123 | [ShenYu #8275](https://github.com/apache/shenyu/pull/8275) | Open |
+| #8205 | [ShenYu #8276](https://github.com/apache/shenyu/pull/8276) | Draft; #8274 |
+| #8203 | [ShenYu #8277](https://github.com/apache/shenyu/pull/8277) | Draft; #8272 |
+| #8206 | [ShenYu #8278](https://github.com/apache/shenyu/pull/8278) | Draft; #8274, #8276 |
+| #8127 | [ShenYu #8279](https://github.com/apache/shenyu/pull/8279) | Draft; #8274, #8276 |
+
+After splitting/rebasing, local owning-reactor verification passed for the
+configuration family (424 tests), capability/observation family (213), HTTP
+failure mapping (259), stream completion (468), Rule overrides (232) and
+RabbitMQ (14). These runs overlap and should not be summed as unique tests.
+Checkstyle and RAT were included. The split contract-kit branch also regenerated
+its independent packaged-consumer proof: clean kit revision
+`1d49d583402fd1f72ad22d7f72d7efdc8af59f86`, 18 producer tests, 4 consumer tests,
+and matching hashes for all resolved ShenYu JARs.
+
+Splitting required a duplicate-import correction for an upstream test change,
+the shared fixture's existing builder-name correction for the RabbitMQ branch,
+and extracting the shared Admin write-test helper so Rule overrides do not depend
+on Divide. No excluded issue was added. CI is running independently on GitHub.
 
 ## Counted implementations
 
