@@ -69,6 +69,13 @@ Splitting required a duplicate-import correction for an upstream test change,
 the shared fixture's existing builder-name correction for the RabbitMQ branch,
 and extracting the shared Admin write-test helper so Rule overrides do not depend
 on Divide. No excluded issue was added. CI is running independently on GitHub.
+The initial status check found one failed job on #8273:
+[Spring Cloud integration](https://github.com/apache/shenyu/actions/runs/41323434605/job/124898335416).
+GitHub identifies the failed step as "Start docker compose", before test
+execution. Downloading its raw log stalled, so the underlying cause is not yet
+established; this is not reported as a passing CI run. Other checks have passed
+or remain in progress. All ten PRs were open, mergeable, and matched their
+published local branch heads when verified.
 
 ## Counted implementations
 
