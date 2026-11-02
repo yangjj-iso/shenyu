@@ -40,8 +40,10 @@ local implementations, not a claim that upstream issues have been closed.
 
 The core publication branches use updated upstream master `92d16c292`.
 All ten feature branches and the original aggregate branches were pushed to the
-yangjj-iso forks. Prerequisite-dependent PRs are drafts; their descriptions link
-the prerequisites and a comparison containing only the new feature.
+yangjj-iso forks. On 2026-11-02, the prerequisite-dependent PRs were marked ready
+for review as requested. Their descriptions retain the prerequisite merge order
+and a comparison containing only the new feature. Ready for review does not mean
+that prerequisite merges or the documented deployment/release checks are complete.
 
 | Issue | Upstream PR | State / prerequisite |
 | --- | --- | --- |
@@ -51,10 +53,10 @@ the prerequisites and a comparison containing only the new feature.
 | #8201 | [ShenYu #8272](https://github.com/apache/shenyu/pull/8272) | Open |
 | #8210 | [ShenYu #8273](https://github.com/apache/shenyu/pull/8273) | Open |
 | #8123 | [ShenYu #8275](https://github.com/apache/shenyu/pull/8275) | Open |
-| #8205 | [ShenYu #8276](https://github.com/apache/shenyu/pull/8276) | Draft; #8274 |
-| #8203 | [ShenYu #8277](https://github.com/apache/shenyu/pull/8277) | Draft; #8272 |
-| #8206 | [ShenYu #8278](https://github.com/apache/shenyu/pull/8278) | Draft; #8274, #8276 |
-| #8127 | [ShenYu #8279](https://github.com/apache/shenyu/pull/8279) | Draft; #8274, #8276 |
+| #8205 | [ShenYu #8276](https://github.com/apache/shenyu/pull/8276) | Open; merge after #8274 |
+| #8203 | [ShenYu #8277](https://github.com/apache/shenyu/pull/8277) | Open; merge after #8272 |
+| #8206 | [ShenYu #8278](https://github.com/apache/shenyu/pull/8278) | Open; merge after #8274, #8276 |
+| #8127 | [ShenYu #8279](https://github.com/apache/shenyu/pull/8279) | Open; merge after #8274, #8276 |
 
 After splitting/rebasing, local owning-reactor verification passed for the
 configuration family (424 tests), capability/observation family (213), HTTP
