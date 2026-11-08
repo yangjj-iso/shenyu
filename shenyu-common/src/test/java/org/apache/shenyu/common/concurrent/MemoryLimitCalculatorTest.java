@@ -19,6 +19,9 @@ package org.apache.shenyu.common.concurrent;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.TimeUnit;
+
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,6 +57,12 @@ public class MemoryLimitCalculatorTest {
         // The available memory must account for the part of the heap the JVM can
         // still commit up to -Xmx, not only the free part of the committed heap.
         final Runtime runtime = Runtime.getRuntime();
-        assertTrue(MemoryLimitCalculator.maxAvailable() >= runtime.maxMemory() - runtime.totalMemory());
+        // A GC can shrink the committed heap before the 50 ms cached sample refreshes.
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+            final long available = MemoryLimitCalculator.maxAvailable();
+            final long uncommitted = runtime.maxMemory() - runtime.totalMemory();
+            assertTrue(available >= uncommitted,
+                    () -> "Sampled available memory " + available + " is below uncommitted heap " + uncommitted);
+        });
     }
 }
